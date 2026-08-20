@@ -4,75 +4,243 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Тест AirPods</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 25px;
+      text-align: center;
+    }
+
+    button {
+      display: block;
+      width: 100%;
+      max-width: 400px;
+      margin: 12px auto;
+      padding: 18px;
+      font-size: 18px;
+    }
+
+    #status {
+      margin: 25px 0;
+      font-size: 20px;
+      font-weight: bold;
+    }
+
+    #track {
+      font-size: 24px;
+      margin: 20px;
+    }
+  </style>
 </head>
+
 <body>
 
-<h2>Тест AirPods 2</h2>
+  <h1>Тест AirPods</h1>
 
-<button id="next">ПОНЯЛ — ДАЛЬШЕ</button>
-<button id="translate">НЕ ПОНЯЛ — ПЕРЕВОД</button>
+  <div id="track">Трек: TEST</div>
 
-<p id="status">Нажми кнопку «Старт аудио»</p>
+  <audio id="audio" controls></audio>
 
-<button id="start">▶ Старт аудио</button>
+  <button id="start">▶ Старт</button>
 
-<audio id="audio" controls loop>
-  <source src="test.mp3" type="audio/mpeg">
-</audio>
+  <button id="next">
+    ПОНЯЛ — ДАЛЬШЕ
+  </button>
+
+  <button id="translate">
+    НЕ ПОНЯЛ — ПЕРЕВОД
+  </button>
+
+  <div id="status">
+    Ожидание...
+  </div>
+
 
 <script>
+
 const audio = document.getElementById('audio');
+const trackText = document.getElementById('track');
 const status = document.getElementById('status');
 
-let lastNext = 0;
+
+// ------------------------------------
+// ТРЕКИ
+// ------------------------------------
+
+const tracks = [
+  {
+    name: 'TEST',
+    file: 'test.mp3'
+  },
+  {
+    name: 'A',
+    file: 'A.mp3'
+  },
+  {
+    name: 'B',
+    file: 'B.mp3'
+  }
+];
+
+let currentTrack = 0;
+
+
+// ------------------------------------
+// ЗАГРУЗИТЬ ТРЕК
+// ------------------------------------
+
+function loadTrack(index, autoplay = false) {
+
+  currentTrack = index;
+
+  audio.src = tracks[index].file;
+
+  trackText.textContent =
+    'Трек: ' + tracks[index].name;
+
+  status.textContent =
+    'Загружен: ' + tracks[index].name;
+
+  navigator.mediaSession.metadata =
+    new MediaMetadata({
+      title: tracks[index].name,
+      artist: 'Тест AirPods',
+      album: 'AirPods Test'
+    });
+
+  if (autoplay) {
+    audio.play().catch(() => {});
+  }
+}
+
+
+// ------------------------------------
+// СЛЕДУЮЩИЙ ТРЕК
+// TEST → A → B
+// ------------------------------------
+
+function nextTrack() {
+
+  if (currentTrack < tracks.length - 1) {
+
+    currentTrack++;
+
+    loadTrack(currentTrack, true);
+
+    status.textContent =
+      '▶ Следующий: ' +
+      tracks[currentTrack].name;
+
+  } else {
+
+    status.textContent =
+      '🏁 Это последний трек — B';
+
+    audio.pause();
+  }
+}
+
+
+// ------------------------------------
+// ПРЕДЫДУЩАЯ КОМАНДА
+// ------------------------------------
+
+function previousCommand() {
+
+  status.textContent =
+    '🔵 PREVIOUSTRACK → НЕ ПОНЯЛ — ПЕРЕВОД';
+}
+
+
+// ------------------------------------
+// КНОПКИ
+// ------------------------------------
+
+document.getElementById('start').onclick = () => {
+
+  audio.play();
+
+  status.textContent =
+    '🎧 Аудио играет: ' +
+    tracks[currentTrack].name;
+};
+
 
 document.getElementById('next').onclick = () => {
-  status.textContent = '✅ ПОНЯЛ — ДАЛЬШЕ';
+
+  nextTrack();
 };
+
 
 document.getElementById('translate').onclick = () => {
-  status.textContent = '🔵 НЕ ПОНЯЛ — ПЕРЕВОД';
+
+  previousCommand();
 };
 
-document.getElementById('start').onclick = async () => {
-  try {
-    await audio.play();
-    status.textContent = '🎧 Аудио играет. Теперь попробуй AirPod.';
-  } catch (e) {
-    status.textContent = '❌ Не удалось запустить аудио: ' + e;
+
+// ------------------------------------
+// АВТОМАТИЧЕСКИ ПОСЛЕ ОКОНЧАНИЯ
+// TEST → A → B
+// ------------------------------------
+
+audio.addEventListener('ended', () => {
+
+  if (currentTrack < tracks.length - 1) {
+
+    nextTrack();
+
+  } else {
+
+    status.textContent =
+      '🏁 Все треки закончились';
   }
-};
+
+});
+
+
+// ------------------------------------
+// MEDIA SESSION
+// ------------------------------------
 
 if ('mediaSession' in navigator) {
 
-  status.textContent = 'Media Session поддерживается';
+  status.textContent =
+    'Media Session поддерживается';
 
-  navigator.mediaSession.metadata = new MediaMetadata({
-    title: 'Тест AirPods',
-    artist: 'Мой тренажёр'
-  });
+  navigator.mediaSession.setActionHandler(
+    'nexttrack',
+    () => {
 
-  navigator.mediaSession.setActionHandler('nexttrack', () => {
+      status.textContent =
+        '🎧 AIRPODS → NEXTTRACK';
 
-    const now = Date.now();
-
-    if (now - lastNext < 700) {
-      document.getElementById('translate').click();
-      status.textContent = '🔵 ДВОЙНАЯ КОМАНДА → ПЕРЕВОД';
-    } else {
-      document.getElementById('next').click();
+      nextTrack();
     }
+  );
 
-    lastNext = now;
-  });
 
-  navigator.mediaSession.setActionHandler('previoustrack', () => {
-    status.textContent = '⏮ PREVIOUSTRACK ПОЛУЧЕН';
-  });
+  navigator.mediaSession.setActionHandler(
+    'previoustrack',
+    () => {
+
+      previousCommand();
+    }
+  );
 
 } else {
-  status.textContent = '❌ Media Session НЕ поддерживается';
+
+  status.textContent =
+    '❌ Media Session не поддерживается';
 }
+
+
+// ------------------------------------
+// НАЧАЛЬНЫЙ ТРЕК
+// ------------------------------------
+
+loadTrack(0, false);
+
 </script>
 
 </body>
