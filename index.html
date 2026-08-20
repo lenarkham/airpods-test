@@ -3,13 +3,31 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+
   <title>Тест AirPods</title>
 
   <style>
     body {
       font-family: Arial, sans-serif;
-      padding: 25px;
+      padding: 20px;
       text-align: center;
+    }
+
+    #track {
+      font-size: 32px;
+      font-weight: bold;
+      margin: 30px 0;
+    }
+
+    #status {
+      font-size: 20px;
+      min-height: 60px;
+      margin: 20px 0;
+    }
+
+    #counter {
+      font-size: 18px;
+      margin: 20px;
     }
 
     button {
@@ -21,201 +39,258 @@
       font-size: 18px;
     }
 
-    #status {
-      margin: 25px 0;
-      font-size: 20px;
-      font-weight: bold;
-    }
-
-    #track {
-      font-size: 24px;
-      margin: 20px;
+    audio {
+      width: 100%;
+      margin: 20px 0;
     }
   </style>
 </head>
 
 <body>
 
-  <h1>Тест AirPods</h1>
+<h1>Тест AirPods A2031</h1>
 
-  <div id="track">Трек: TEST</div>
+<div id="track">TEST</div>
 
-  <audio id="audio" controls></audio>
+<audio id="audio" controls></audio>
 
-  <button id="start">▶ Старт</button>
+<button id="start">
+  ▶ СТАРТ
+</button>
 
-  <button id="next">
-    ПОНЯЛ — ДАЛЬШЕ
-  </button>
+<div id="status">
+  Готово
+</div>
 
-  <button id="translate">
-    НЕ ПОНЯЛ — ПЕРЕВОД
-  </button>
-
-  <div id="status">
-    Ожидание...
-  </div>
+<div id="counter">
+  Команд AirPods: 0
+</div>
 
 
 <script>
 
 const audio = document.getElementById('audio');
-const trackText = document.getElementById('track');
-const status = document.getElementById('status');
+const trackElement = document.getElementById('track');
+const statusElement = document.getElementById('status');
+const counterElement = document.getElementById('counter');
 
 
-// ------------------------------------
+// ========================================
 // ТРЕКИ
-// ------------------------------------
+// ========================================
 
-const tracks = [
-  {
-    name: 'TEST',
-    file: 'test.mp3'
-  },
-  {
-    name: 'A',
-    file: 'A.mp3'
-  },
-  {
-    name: 'B',
-    file: 'B.mp3'
-  }
-];
-
-let currentTrack = 0;
+const tracks = {
+  TEST: 'test.mp3',
+  A: 'A.mp3',
+  C: 'C.mp3'
+};
 
 
-// ------------------------------------
+// ========================================
+// ТЕКУЩИЙ ТРЕК
+// ========================================
+
+let currentTrack = 'TEST';
+
+
+// ========================================
+// СЧЁТЧИК КОМАНД
+// ========================================
+
+let totalCommands = 0;
+
+
+// ========================================
+// ПОСЛЕДОВАТЕЛЬНОСТЬ
+// ========================================
+
+let commandCount = 0;
+
+let commandTimer = null;
+
+
+// ========================================
 // ЗАГРУЗИТЬ ТРЕК
-// ------------------------------------
+// ========================================
 
-function loadTrack(index, autoplay = false) {
+function loadTrack(name, autoplay = false) {
 
-  currentTrack = index;
+  currentTrack = name;
 
-  audio.src = tracks[index].file;
+  audio.src = tracks[name];
 
-  trackText.textContent =
-    'Трек: ' + tracks[index].name;
+  trackElement.textContent = name;
 
-  status.textContent =
-    'Загружен: ' + tracks[index].name;
 
-  navigator.mediaSession.metadata =
-    new MediaMetadata({
-      title: tracks[index].name,
-      artist: 'Тест AirPods',
-      album: 'AirPods Test'
-    });
+  if ('mediaSession' in navigator) {
+
+    navigator.mediaSession.metadata =
+      new MediaMetadata({
+        title: name,
+        artist: 'Тест AirPods',
+        album: 'AirPods Test'
+      });
+
+  }
+
 
   if (autoplay) {
+
     audio.play().catch(() => {});
+
   }
+
 }
 
 
-// ------------------------------------
-// СЛЕДУЮЩИЙ ТРЕК
-// TEST → A → B
-// ------------------------------------
+// ========================================
+// 1× ДВОЙНОЕ КАСАНИЕ
+// TEST → A
+// ========================================
 
-function nextTrack() {
+function goToA() {
 
-  if (currentTrack < tracks.length - 1) {
+  if (currentTrack === 'TEST') {
 
-    currentTrack++;
+    loadTrack('A', true);
 
-    loadTrack(currentTrack, true);
-
-    status.textContent =
-      '▶ Следующий: ' +
-      tracks[currentTrack].name;
+    statusElement.textContent =
+      '▶ TEST → A';
 
   } else {
 
-    status.textContent =
-      '🏁 Это последний трек — B';
+    statusElement.textContent =
+      'ℹ Сейчас играет ' + currentTrack;
 
-    audio.pause();
   }
+
 }
 
 
-// ------------------------------------
-// ПРЕДЫДУЩАЯ КОМАНДА
-// ------------------------------------
+// ========================================
+// 2× ДВОЙНОЕ КАСАНИЕ
+// → C
+// ========================================
 
-function previousCommand() {
+function goToC() {
 
-  status.textContent =
-    '🔵 PREVIOUSTRACK → НЕ ПОНЯЛ — ПЕРЕВОД';
+  loadTrack('C', true);
+
+  statusElement.textContent =
+    '🎧 → C';
+
 }
 
 
-// ------------------------------------
-// КНОПКИ
-// ------------------------------------
+// ========================================
+// 3× ДВОЙНОЕ КАСАНИЕ
+// → ПАУЗА
+// ========================================
+
+function pauseAudio() {
+
+  audio.pause();
+
+  statusElement.textContent =
+    '⏸ ПАУЗА';
+
+}
+
+
+// ========================================
+// ОБРАБОТКА AIRPODS
+// ========================================
+
+function airPodsNextTrack() {
+
+  totalCommands++;
+
+  counterElement.textContent =
+    'Команд AirPods: ' + totalCommands;
+
+
+  commandCount++;
+
+  statusElement.textContent =
+    '🎧 Команда ' + commandCount;
+
+
+  clearTimeout(commandTimer);
+
+
+  commandTimer = setTimeout(() => {
+
+
+    // 1×
+    if (commandCount === 1) {
+
+      goToA();
+
+    }
+
+
+    // 2×
+    else if (commandCount === 2) {
+
+      goToC();
+
+    }
+
+
+    // 3×
+    else if (commandCount === 3) {
+
+      pauseAudio();
+
+    }
+
+
+    else {
+
+      statusElement.textContent =
+        'Получено команд: ' +
+        commandCount;
+
+    }
+
+
+    commandCount = 0;
+
+  }, 800);
+
+}
+
+
+// ========================================
+// START
+// ========================================
 
 document.getElementById('start').onclick = () => {
 
-  audio.play();
+  loadTrack('TEST', true);
 
-  status.textContent =
-    '🎧 Аудио играет: ' +
-    tracks[currentTrack].name;
+  statusElement.textContent =
+    '▶ Играет TEST';
+
 };
 
 
-document.getElementById('next').onclick = () => {
-
-  nextTrack();
-};
-
-
-document.getElementById('translate').onclick = () => {
-
-  previousCommand();
-};
-
-
-// ------------------------------------
-// АВТОМАТИЧЕСКИ ПОСЛЕ ОКОНЧАНИЯ
-// TEST → A → B
-// ------------------------------------
-
-audio.addEventListener('ended', () => {
-
-  if (currentTrack < tracks.length - 1) {
-
-    nextTrack();
-
-  } else {
-
-    status.textContent =
-      '🏁 Все треки закончились';
-  }
-
-});
-
-
-// ------------------------------------
+// ========================================
 // MEDIA SESSION
-// ------------------------------------
+// ========================================
 
 if ('mediaSession' in navigator) {
 
-  status.textContent =
-    'Media Session поддерживается';
+  statusElement.textContent =
+    '✅ Media Session работает';
+
 
   navigator.mediaSession.setActionHandler(
     'nexttrack',
     () => {
 
-      status.textContent =
-        '🎧 AIRPODS → NEXTTRACK';
+      airPodsNextTrack();
 
-      nextTrack();
     }
   );
 
@@ -224,22 +299,26 @@ if ('mediaSession' in navigator) {
     'previoustrack',
     () => {
 
-      previousCommand();
+      statusElement.textContent =
+        '⏮ PREVIOUSTRACK';
+
     }
   );
 
+
 } else {
 
-  status.textContent =
+  statusElement.textContent =
     '❌ Media Session не поддерживается';
+
 }
 
 
-// ------------------------------------
-// НАЧАЛЬНЫЙ ТРЕК
-// ------------------------------------
+// ========================================
+// НАЧАЛО
+// ========================================
 
-loadTrack(0, false);
+loadTrack('TEST', false);
 
 </script>
 
